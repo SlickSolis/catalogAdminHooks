@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+# To enable this hook, rename this file to "pre-commit".
+SH_RED='\033[0;31m'
+SH_LBLUE='\033[1;36m'
+SH_NC='\033[0m'
+
+echo ""
+printf "${SH_LBLUE}[Running post-commit hook]${SH_NC}"
+echo ""
+echo ""
+echo "Checking if docker service is up and running..."
+
+isServiceUp=$(docker-compose ps --services --filter "status=running" | grep admin-php)
+
+if [ $? -ne 0 ]; then
+    printf "${SH_RED}Could not find running docker service.  Aborting...${SH_NC}"
+    exit 100
+fi
+
+echo "Running tests via phpunit..."
+
+docker-compose exec -T admin-php ./bin/phpunit --stop-on-defect --order-by defects
+
+if [ $? -ne 0 ]; then
+    printf "${SH_RED}Encountered test failure.  Aborting...${SH_NC}"
+    exit 101
+fi
